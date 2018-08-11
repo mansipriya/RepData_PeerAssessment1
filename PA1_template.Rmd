@@ -7,19 +7,68 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r r1,echo = TRUE}
+unzip("activity.zip")
+activity_data <- read.csv("activity.csv")
+head(activity_data)
+str(activity_data)
+tail(activity_data)
 
+activity_data <- transform(activity_data,date = as.Date(date))                           
+str(activity_data)
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r r2,echo = TRUE}
+sum_daily <- aggregate(activity_data$steps ~ activity_data$date, FUN=sum, )
+head(sum_daily)
+colnames(sum_daily) <- c("DATE","STEPS")
+hist(sum_daily$STEPS, xlab="Steps",ylab = "Frequency",breaks = 50,col = "springgreen", main = "Total Steps per Day")
 
-
+mean <- mean(sum_daily$STEPS)
+print(mean)
+med <- median(sum_daily$STEPS)
+print(med)
+```
 
 ## What is the average daily activity pattern?
-
-
+```{r r3,echo=TRUE}
+avg_steps <- tapply(activity_data$steps, activity_data$interval, mean, na.rm=TRUE, simplify=T)
+head(avg_steps)
+plot(as.integer(names(avg_steps)),main = "Average steps in intervals in the given time",xlab = "Interval",ylab = "Avg steps",avg_steps,type = "l")
+avg_steps_df <- data.frame(interval=as.integer(names(avg_steps)), avg=avg_steps)
+print(avg_steps_df[avg_steps_df$avg ==max(avg_steps),1])
+```
 
 ## Imputing missing values
+```{r r4,echo = TRUE}
+sum(is.na(activity_data$steps))
 
+nas <- is.na(activity_data$steps)
+activity_data$steps[nas] <- avg_steps[as.character(activity_data$interval[nas])]
+str(activity_data)
+new_data <- activity_data
 
+sum_daily_2 <- aggregate(new_data$steps ~ new_data$date, FUN=sum, )
+head(sum_daily_2)
+colnames(sum_daily_2) <- c("DATE","STEPS")
+hist(sum_daily_2$STEPS, xlab="Steps",ylab = "Frequency",breaks = 50,col = "tomato2", main = "Total Steps per Day")
+
+mean_2 <- mean(sum_daily_2$STEPS)
+print(mean_2)
+med_2 <- median(sum_daily_2$STEPS)
+print(med_2)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r r5,echo = TRUE}
+activity_data$week_factor <- ifelse(weekdays(activity_data$date) %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
+head(activity_data)
+library(lattice) 
+library(plyr)
+n_data <- ddply(activity_data, .(interval, week_factor), summarize, avg = mean(steps))
+xyplot(avg~interval|week_factor, data= n_data, type="l",  layout = c(1,2),
+       main="Average Steps per Interval Based on Type of Day", 
+       ylab="Average Number of Steps", xlab="Interval")
+```
